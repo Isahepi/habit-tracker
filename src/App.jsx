@@ -84,7 +84,7 @@ function habitsFor(date) {
 
   /* after work */
   if (dow >= 1 && dow <= 5) list.push({ id: "piano", label: "Piano" });
-  if (dow >= 1 && dow <= 4) list.push({ id: "study", label: "Study hour" });
+  if (dow !== 5) list.push({ id: "study", label: "Study hour" });
 
   /* evening, day-specific */
   if (dow === 1 && even) list.push({ id: "cleaning", label: "House cleaning" });
@@ -529,7 +529,7 @@ export default function HabitTracker() {
       });
     });
     return Object.entries(stats)
-      .map(([id, s]) => ({ id, pct: s.done / s.total }))
+      .map(([id, s]) => ({ id, pct: s.done / s.total, done: s.done, total: s.total }))
       .sort((a, b) => b.pct - a.pct);
   })();
 
@@ -953,7 +953,10 @@ export default function HabitTracker() {
                           color: h.pct >= 0.75 ? C.success : C.sub,
                         }}
                       >
-                        {Math.round(h.pct * 100)}%
+                        {Math.round(h.pct * 100)}%{" "}
+                        <span style={{ fontWeight: 400, color: C.subFaint }}>
+                          ({h.done}/{h.total})
+                        </span>
                       </span>
                     </div>
                     <div
