@@ -64,9 +64,9 @@ const weekKey = (d) => {
 /* ---------- schedule ---------- */
 const VIDEO_THEME = {
   1: "Business",
-  2: "Mentality · take notes",
+  2: "Mentality · notes",
   3: "Computer science",
-  4: "Styling / curly hair",
+  4: "Styling / hair",
   5: "Sports",
   6: "Books / free pick",
   0: "Books / free pick",
@@ -78,57 +78,61 @@ function habitsFor(date) {
   const even = week % 2 === 0;
   const list = [];
 
-  if (dow >= 1 && dow <= 5)
-    list.push({ id: "gym", label: "Morning gym", time: "Early AM" });
+  /* morning */
+  if (dow >= 1 && dow <= 5) list.push({ id: "gym", label: "Gym" });
+  list.push({ id: "gratitude", label: "Gratitude journal" });
 
+  /* after work */
+  if (dow >= 1 && dow <= 5) list.push({ id: "piano", label: "Piano" });
+  if (dow >= 1 && dow <= 4) list.push({ id: "study", label: "Study hour" });
+
+  /* evening, day-specific */
+  if (dow === 1 && even) list.push({ id: "cleaning", label: "House cleaning" });
+  if (dow === 2) list.push({ id: "tennis", label: "Tennis" });
+  if (dow === 3) {
+    if (even) list.push({ id: "bizNight", label: "Business night · planning & calls" });
+    else
+      list.push(
+        { id: "padel", label: "Padel · 45 min" },
+        { id: "instaedit", label: "Instagram editing" }
+      );
+  }
+  if (dow === 4) list.push({ id: "buffer", label: "Buffer / catch-up" });
+  if (dow === 5) list.push({ id: "friends", label: "Friends" });
+  if (dow === 6) {
+    if (even) list.push({ id: "groceries", label: "Groceries" });
+    list.push({ id: "mealprep", label: "Meal prep" });
+    if (even) list.push({ id: "laundry", label: "Laundry" });
+    list.push({ id: "hobby", label: "Hobby" });
+  }
+  if (dow === 0) list.push({ id: "review", label: "Weekly review" });
+
+  /* wind-down */
   list.push(
-    { id: "piano", label: "Piano · 30 min", time: "After work" },
-    { id: "study", label: "Study hour", time: "After piano" }
-  );
-
-  if (dow === 1 && even)
-    list.push({ id: "cleaning", label: "House cleaning", time: "7:30 PM" });
-  if (dow === 2) list.push({ id: "tennis", label: "Tennis", time: "7:30 PM" });
-  if (dow === 3)
-    list.push(
-      even
-        ? { id: "padel", label: "Padel business planning", time: "7:30 PM" }
-        : { id: "insta", label: "Instagram content (Andrés)", time: "7:30 PM" }
-    );
-  if (dow === 4)
-    list.push({ id: "buffer", label: "Buffer · catch-up", time: "7:30 PM" });
-  if (dow === 5) list.push({ id: "social", label: "Social night", time: "Evening" });
-  if (dow === 6)
-    list.push({ id: "biz", label: "Business projects block", time: "10–12 AM" });
-  if (dow === 0)
-    list.push(
-      { id: "maint", label: "Maintenance (prep · laundry)", time: "Flexible" },
-      { id: "review", label: "Weekly review · 30 min", time: "Evening" }
-    );
-
-  list.push(
-    { id: "gratitude", label: "Gratitude journal", time: "Stacked" },
-    { id: "facecare", label: "Face care", time: "Stacked" },
-    { id: "reading", label: "Reading", time: "Stacked" },
-    { id: "video", label: `Video · ${VIDEO_THEME[dow]}`, time: "Before sleep" }
+    { id: "facecare", label: "Face care" },
+    { id: "reading", label: "Reading" },
+    { id: "video", label: `Video / podcast · ${VIDEO_THEME[dow]}` }
   );
   return list;
 }
 
 const ICONS = {
   gym: "🏋️",
+  gratitude: "🙏",
   piano: "🎹",
   study: "📚",
   cleaning: "🧹",
   tennis: "🎾",
+  bizNight: "💼",
   padel: "🏓",
-  insta: "📸",
+  instaedit: "📸",
   buffer: "🌿",
-  social: "🎉",
-  biz: "💼",
-  maint: "🧺",
+  friends: "🎉",
+  groceries: "🛒",
+  mealprep: "🍱",
+  laundry: "🧺",
+  hobby: "🎨",
   review: "📝",
-  gratitude: "🙏",
   facecare: "🧴",
   reading: "📖",
   video: "🎬",
@@ -276,15 +280,6 @@ function HabitRow({ habit, done, onToggle }) {
           }}
         >
           {habit.label}
-        </span>
-        <span
-          style={{
-            fontFamily: "'Karla', sans-serif",
-            fontSize: 11.5,
-            color: done ? "#B9B8D6" : C.sub,
-          }}
-        >
-          {habit.time}
         </span>
       </span>
       <span
