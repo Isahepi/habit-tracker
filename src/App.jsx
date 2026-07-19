@@ -138,6 +138,28 @@ const ICONS = {
   video: "🎬",
 };
 
+const HABIT_LABELS = {
+  gym: "Gym",
+  gratitude: "Gratitude",
+  piano: "Piano",
+  study: "Study hour",
+  cleaning: "House cleaning",
+  tennis: "Tennis",
+  bizNight: "Business night",
+  padel: "Padel",
+  instaedit: "Instagram editing",
+  buffer: "Buffer / catch-up",
+  friends: "Friends",
+  groceries: "Groceries",
+  mealprep: "Meal prep",
+  laundry: "Laundry",
+  hobby: "Hobby",
+  review: "Weekly review",
+  facecare: "Face care",
+  reading: "Reading",
+  video: "Video / podcast",
+};
+
 /* ---------- storage (browser localStorage — stays on this device) ---------- */
 const STORE_KEY = "isa-tracker-2026";
 
@@ -461,10 +483,55 @@ export default function HabitTracker() {
     });
     return n ? sum / n : 0;
   });
-  const totalChecks = Object.values(data.days).reduce(
-    (a, v) => a + Object.values(v).filter(Boolean).length,
-    0
-  );
+  /* ---- best streak & perfect days (all-time) ---- */
+  const dayKeys = Object.keys(data.days);
+  const bestStreak = (() => {
+    if (!dayKeys.length) return 0;
+    const dates = dayKeys.map((k) => {
+      const [y, m, day] = k.split("-").map(Number);
+      return new Date(y, m - 1, day);
+    });
+    const cur = new Date(Math.min(...dates));
+    const end = new Date();
+    let best = 0,
+      run = 0;
+    while (cur <= end) {
+      const hs = habitsFor(cur);
+      const dd = data.days[toKey(cur)] || {};
+      const p = hs.length ? hs.filter((h) => dd[h.id]).length / hs.length : 0;
+      if (p >= 0.75) {
+        run++;
+        best = Math.max(best, run);
+      } else {
+        run = 0;
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+    return best;
+  })();
+  const perfectDays = dayKeys.filter((k) => {
+    const [y, m, day] = k.split("-").map(Number);
+    const hs = habitsFor(new Date(y, m - 1, day));
+    const dd = data.days[k];
+    return hs.length && hs.every((h) => dd[h.id]);
+  }).length;
+
+  /* ---- per-habit consistency, this year ---- */
+  const habitStats = (() => {
+    const stats = {};
+    Object.entries(data.days).forEach(([k, v]) => {
+      const [y, mo, day] = k.split("-").map(Number);
+      if (y !== year) return;
+      habitsFor(new Date(y, mo - 1, day)).forEach((h) => {
+        stats[h.id] = stats[h.id] || { done: 0, total: 0 };
+        stats[h.id].total++;
+        if (v[h.id]) stats[h.id].done++;
+      });
+    });
+    return Object.entries(stats)
+      .map(([id, s]) => ({ id, pct: s.done / s.total }))
+      .sort((a, b) => b.pct - a.pct);
+  })();
 
   /* ---- week strip ---- */
   const monday = new Date(viewDate);
@@ -803,9 +870,10 @@ export default function HabitTracker() {
 
       {tab === "year" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 14, animation: "fadeSlideIn .3s ease" }}>
-          <div style={{ display: "flex", gap: 10 }}>
+          <div style={{ display: "flex", gap: 8 }}>
             <StatCard label="Current streak" value={`${streak}d`} icon="🔥" />
-            <StatCard label="Habits checked" value={totalChecks} icon="✅" />
+            <StatCard label="Best streak" value={`${bestStreak}d`} icon="🏆" />
+            <StatCard label="Perfect days" value={perfectDays} icon="✨" />
           </div>
           <div style={cardStyle}>
             <div
@@ -848,6 +916,73 @@ export default function HabitTracker() {
               ))}
             </div>
           </div>
+          <div style={cardStyle}>
+            <div
+              style={{
+                fontFamily: "'Zilla Slab', serif",
+                fontWeight: 700,
+                fontSize: 16,
+                marginBottom: 14,
+              }}
+            >
+              Habit consistency · {year}
+            </div>
+            {habitStats.length === 0 ? (
+              <div style={{ fontSize: 13, color: C.sub }}>
+                Check off a few days and this will fill in.
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {habitStats.map((h) => (
+                  <div key={h.id}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        fontSize: 12.5,
+                        marginBottom: 5,
+                      }}
+                    >
+                      <span>
+                        {ICONS[h.id] || "✨"} {HABIT_LABELS[h.id] || h.id}
+                      </span>
+                      <span
+                        style={{
+                          fontWeight: 700,
+                          color: h.pct >= 0.75 ? C.success : C.sub,
+                        }}
+                      >
+                        {Math.round(h.pct * 100)}%
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        height: 6,
+                        borderRadius: 4,
+                        background: C.line,
+                        overflow: "hidden",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: `${h.pct * 100}%`,
+                          height: "100%",
+                          borderRadius: 4,
+                          background:
+                            h.pct >= 0.75
+                              ? `linear-gradient(90deg, ${C.accent}, ${C.violet})`
+                              : C.subFaint,
+                          transition: "width .3s ease",
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div style={{ fontSize: 12, color: C.sub, textAlign: "center" }}>
             Consistency over intensity — 75% every day beats 100% for one week.
           </div>
