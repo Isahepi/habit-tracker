@@ -180,6 +180,34 @@ async function saveData(data) {
   }
 }
 
+/* ---------- backup reminder ---------- */
+const BACKUP_META_KEY = `${STORE_KEY}-backup-meta`;
+const DAY_MS = 86400000;
+const BACKUP_REMIND_AFTER_DAYS = 14;
+
+function loadBackupMeta() {
+  try {
+    const raw = window.localStorage.getItem(BACKUP_META_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {
+    /* ignore */
+  }
+  const fresh = { createdAt: Date.now(), lastBackup: null, snoozedUntil: null };
+  try {
+    window.localStorage.setItem(BACKUP_META_KEY, JSON.stringify(fresh));
+  } catch (e) {
+    /* ignore */
+  }
+  return fresh;
+}
+function saveBackupMeta(meta) {
+  try {
+    window.localStorage.setItem(BACKUP_META_KEY, JSON.stringify(meta));
+  } catch (e) {
+    /* ignore */
+  }
+}
+
 /* ---------- copy ---------- */
 function greetingWord() {
   const h = new Date().getHours();
@@ -401,9 +429,11 @@ export default function HabitTracker() {
   const [tab, setTab] = useState("week");
   const [viewDate, setViewDate] = useState(new Date());
   const restoreInputRef = useRef(null);
+  const [backupMeta, setBackupMeta] = useState(null);
 
   useEffect(() => {
     loadData().then(setData);
+    setBackupMeta(loadBackupMeta());
   }, []);
 
   const update = useCallback((fn) => {
@@ -414,6 +444,14 @@ export default function HabitTracker() {
     });
   }, []);
 
+  const updateBackupMeta = (patch) => {
+    setBackupMeta((prev) => {
+      const next = { ...prev, ...patch };
+      saveBackupMeta(next);
+      return next;
+    });
+  };
+
   const downloadBackup = () => {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -422,7 +460,11 @@ export default function HabitTracker() {
     a.download = `habit-tracker-backup-${toKey(new Date())}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    updateBackupMeta({ lastBackup: Date.now(), snoozedUntil: null });
   };
+
+  const snoozeBackupReminder = () =>
+    updateBackupMeta({ snoozedUntil: Date.now() + 7 * DAY_MS });
 
   const restoreBackup = (e) => {
     const file = e.target.files?.[0];
@@ -466,6 +508,14 @@ export default function HabitTracker() {
         Loading your tracker…
       </div>
     );
+
+  const backupDue = (() => {
+    if (!backupMeta) return false;
+    const baseline = backupMeta.lastBackup || backupMeta.createdAt;
+    if (Date.now() - baseline < BACKUP_REMIND_AFTER_DAYS * DAY_MS) return false;
+    if (backupMeta.snoozedUntil && Date.now() < backupMeta.snoozedUntil) return false;
+    return true;
+  })();
 
   const dKey = toKey(viewDate);
   const wKey = weekKey(viewDate);
@@ -628,6 +678,61 @@ export default function HabitTracker() {
       }}
     >
       <style>{FONTS}</style>
+
+      {backupDue && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            background: C.accentSoft,
+            border: `1px solid ${C.accent}`,
+            borderRadius: 14,
+            padding: "10px 12px",
+            marginBottom: 14,
+            animation: "fadeSlideIn .3s ease",
+          }}
+        >
+          <span style={{ fontSize: 18 }}>💾</span>
+          <span style={{ flex: 1, fontSize: 12.5, color: "#7A4E10", fontWeight: 700 }}>
+            Haven't backed up in a while — protect your streak.
+          </span>
+          <button
+            onClick={downloadBackup}
+            style={{
+              padding: "6px 12px",
+              borderRadius: 8,
+              border: "none",
+              background: C.ink,
+              color: "#fff",
+              fontWeight: 700,
+              fontSize: 11.5,
+              cursor: "pointer",
+              fontFamily: "'Karla', sans-serif",
+              whiteSpace: "nowrap",
+            }}
+          >
+            Back up
+          </button>
+          <button
+            onClick={snoozeBackupReminder}
+            style={{
+              padding: "6px 10px",
+              borderRadius: 8,
+              border: "none",
+              background: "transparent",
+              color: "#7A4E10",
+              fontWeight: 700,
+              fontSize: 11.5,
+              cursor: "pointer",
+              fontFamily: "'Karla', sans-serif",
+              whiteSpace: "nowrap",
+            }}
+          >
+            Later
+          </button>
+        </div>
+      )}
 
       {/* header */}
       <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 18 }}>
