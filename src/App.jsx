@@ -68,8 +68,8 @@ const VIDEO_THEME = {
   3: "Computer science",
   4: "Styling / hair",
   5: "Sports",
-  6: "Books / free pick",
-  0: "Books / free pick",
+  6: "Free pick",
+  0: "Free pick",
 };
 
 function habitsFor(date) {
