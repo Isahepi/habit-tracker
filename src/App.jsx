@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 /* ---------- identity ---------- */
 const USER_NAME = "Isa";
@@ -382,11 +382,25 @@ const counterBtn = {
   fontFamily: "'Karla', sans-serif",
 };
 
+const backupBtn = {
+  flex: 1,
+  padding: "9px 0",
+  borderRadius: 10,
+  border: `1px solid ${C.line}`,
+  background: "transparent",
+  color: C.ink,
+  fontWeight: 700,
+  fontSize: 12.5,
+  cursor: "pointer",
+  fontFamily: "'Karla', sans-serif",
+};
+
 /* ---------- main ---------- */
 export default function HabitTracker() {
   const [data, setData] = useState(null);
   const [tab, setTab] = useState("week");
   const [viewDate, setViewDate] = useState(new Date());
+  const restoreInputRef = useRef(null);
 
   useEffect(() => {
     loadData().then(setData);
@@ -399,6 +413,41 @@ export default function HabitTracker() {
       return next;
     });
   }, []);
+
+  const downloadBackup = () => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `habit-tracker-backup-${toKey(new Date())}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const restoreBackup = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      let parsed;
+      try {
+        parsed = JSON.parse(reader.result);
+      } catch {
+        window.alert("That file isn't valid JSON.");
+        return;
+      }
+      if (!parsed || typeof parsed !== "object" || !parsed.days || !parsed.weeks) {
+        window.alert("That doesn't look like a habit tracker backup file.");
+        return;
+      }
+      if (window.confirm("Replace your current data with this backup? This can't be undone.")) {
+        setData(parsed);
+        saveData(parsed);
+      }
+    };
+    reader.readAsText(file);
+  };
 
   if (!data)
     return (
@@ -988,6 +1037,38 @@ export default function HabitTracker() {
 
           <div style={{ fontSize: 12, color: C.sub, textAlign: "center" }}>
             Consistency over intensity — 75% every day beats 100% for one week.
+          </div>
+
+          <div style={cardStyle}>
+            <div
+              style={{
+                fontFamily: "'Zilla Slab', serif",
+                fontWeight: 700,
+                fontSize: 16,
+                marginBottom: 6,
+              }}
+            >
+              Backup
+            </div>
+            <div style={{ fontSize: 12.5, color: C.sub, marginBottom: 12, lineHeight: 1.4 }}>
+              Your data lives only in this browser. Download a backup now and then so clearing
+              your cache — or switching devices — can't wipe your history.
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={downloadBackup} style={backupBtn}>
+                ⬇ Download backup
+              </button>
+              <button onClick={() => restoreInputRef.current?.click()} style={backupBtn}>
+                ⬆ Restore
+              </button>
+            </div>
+            <input
+              ref={restoreInputRef}
+              type="file"
+              accept="application/json"
+              style={{ display: "none" }}
+              onChange={restoreBackup}
+            />
           </div>
         </div>
       )}
